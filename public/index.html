@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>france.re — vos démarches, simplement</title>
+  <meta name="description" content="Posez vos questions sur vos droits et démarches en France. Réponses tirées des données publiques ouvertes : Service-Public.fr, data.gouv.fr, annuaire de l'administration…">
+  <meta name="theme-color" content="#f7f5f0" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11141c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 20'><rect width='10' height='20' fill='%231f3a93'/><rect x='10' width='10' height='20' fill='%23fff'/><rect x='20' width='10' height='20' fill='%23d6303a'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="tricolore" aria-hidden="true"><span></span><span></span><span></span></div>
+
+  <header class="top">
+    <a class="wordmark" href="/" aria-label="france.re, accueil">france<span>.re</span></a>
+    <nav>
+      <button class="link" id="new-chat" hidden data-i18n="new">Nouvelle conversation</button>
+      <a class="link" href="#a-propos" data-i18n="about">À propos</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="hero">
+      <h1 data-i18n="title">Comment pouvons-nous <em>vous aider&nbsp;?</em></h1>
+      <p class="lede" data-i18n="lede">Posez votre question sur vos droits et démarches. Les réponses s'appuient sur les sources publiques officielles.</p>
+    </section>
+
+    <section class="thread" id="thread" aria-live="polite"></section>
+
+    <form class="composer" id="composer">
+      <label for="q" class="sr-only" data-i18n="label">Votre question</label>
+      <textarea id="q" rows="1" maxlength="4000" placeholder="Ex. : Comment renouveler mon passeport ?" data-i18n-placeholder="placeholder" autofocus></textarea>
+      <div class="composer-actions">
+        <button type="button" class="icon-btn" id="mic" hidden aria-label="Dicter la question" data-i18n-aria="mic">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+        </button>
+        <button type="submit" class="send" id="send" aria-label="Envoyer" data-i18n-aria="send">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h13.2l-5.6-5.6L13 5l8 8-8 8-1.4-1.4 5.6-5.6H4z" transform="rotate(-90 12 12)"/></svg>
+        </button>
+      </div>
+    </form>
+
+    <section class="suggestions" id="suggestions" aria-label="Exemples de questions">
+      <button data-q="Comment renouveler mon passeport ?" data-en="Renew my passport" data-q-en="How do I renew my French passport?">Renouveler mon passeport</button>
+      <button data-q="Je veux créer une micro-entreprise : quelles sont les démarches ?" data-en="Start a micro-business" data-q-en="I want to start a micro-entreprise in France: what are the steps?">Créer une micro-entreprise</button>
+      <button data-q="Je suis étudiant, ai-je droit à une aide au logement ?" data-en="Student housing aid" data-q-en="I'm a student in France, am I eligible for housing assistance?">Aide au logement étudiant</button>
+      <button data-q="Quels sont les horaires de la mairie de Roubaix ?" data-en="Town hall opening hours" data-q-en="What are the opening hours of the Roubaix town hall?">Horaires d'une mairie</button>
+      <button data-q="Je viens de me marier, comment utiliser le nom de mon époux ou épouse ?" data-en="Change name after marriage" data-q-en="I just got married, how can I use my spouse's name?">Changer de nom après un mariage</button>
+      <button data-q="Quel est le taux de taxe foncière à Lyon ?" data-en="Local property tax" data-q-en="What is the property tax rate in Lyon?">Taxe foncière de ma commune</button>
+      <button data-q="Quelles sont les démarches à faire après un décès ?" data-en="After a death" data-q-en="What formalities must be done after a death in France?">Démarches après un décès</button>
+      <button data-q="Trouve-moi des données ouvertes sur la qualité de l'air en Île-de-France." data-en="Air quality data" data-q-en="Find open data on air quality in Île-de-France.">Données sur la qualité de l'air</button>
+    </section>
+
+    <section class="sources" id="sources">
+      <p data-i18n="sources">Réponses fondées sur</p>
+      <ul>
+        <li><a href="https://www.service-public.gouv.fr" target="_blank" rel="noopener">Service-Public.fr</a></li>
+        <li><a href="https://www.data.gouv.fr" target="_blank" rel="noopener">data.gouv.fr</a></li>
+        <li><a href="https://lannuaire.service-public.gouv.fr" target="_blank" rel="noopener">Annuaire de l'administration</a></li>
+        <li><a href="https://annuaire-entreprises.data.gouv.fr" target="_blank" rel="noopener">Annuaire des entreprises</a></li>
+        <li><a href="https://www.legifrance.gouv.fr" target="_blank" rel="noopener">Légifrance</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="foot" id="a-propos">
+    <div class="about">
+      <h2 data-i18n="aboutTitle">À propos de france.re</h2>
+      <p data-i18n-html="aboutBody">france.re est un <strong>service indépendant et non officiel</strong>, sans lien avec l'État français. Un assistant d'intelligence artificielle y recherche l'information dans les données publiques ouvertes : fiches pratiques de <a href="https://www.data.gouv.fr/datasets/fiches-pratiques-et-ressources-de-service-public-gouv-fr-particuliers" target="_blank" rel="noopener">Service-Public.fr</a> (DILA, Licence Ouverte), catalogue <a href="https://www.data.gouv.fr" target="_blank" rel="noopener">data.gouv.fr</a> via son <a href="https://github.com/datagouv/datagouv-mcp" target="_blank" rel="noopener">serveur MCP officiel</a>, et d'autres API publiques via le serveur communautaire <a href="https://github.com/OneNicolas/mcp-service-public" target="_blank" rel="noopener">mcp-service-public</a>.</p>
+      <p data-i18n-html="aboutWarn">L'IA peut se tromper : vérifiez toujours sur le site officiel indiqué en source avant d'agir. Ne partagez jamais de données sensibles (numéro fiscal, numéro de sécurité sociale, mots de passe). Pour une aide humaine : <a href="https://www.service-public.gouv.fr/particuliers/vosdroits/F33092" target="_blank" rel="noopener">3939 Allô Service Public</a> ou un <a href="https://www.france-services.gouv.fr" target="_blank" rel="noopener">espace France Services</a>.</p>
+    </div>
+    <p class="fine">france.re · <span data-i18n="free">Gratuit, sans compte, sans publicité.</span></p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>
