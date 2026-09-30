@@ -148,7 +148,17 @@ if (shared) {
         const data = chunk.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trimStart()).join("\n");
         if (!data) continue;
         const ev = JSON.parse(data);
-        if (ev.type === "status") setStep(labelFor(ev.tool, ev.server));
+        if (ev.type === "status") {
+          // Text written before a tool call is the model thinking aloud ("Je vais chercher…"),
+          // not the answer: keep it as a progress note and start the answer afresh.
+          if (md.trim()) {
+            if (frame) cancelAnimationFrame(frame), (frame = 0);
+            steps.append(Object.assign(el("div", "step note"), { textContent: md.trim().replace(/\s+/g, " ").slice(0, 200) }));
+            md = "";
+            answer.innerHTML = `<span class="typing" aria-label="${T.thinking}"><i></i><i></i><i></i></span>`;
+          }
+          setStep(labelFor(ev.tool, ev.server));
+        }
         else if (ev.type === "text") {
           if (!md) setStep(null);
           md += ev.text;

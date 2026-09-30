@@ -10,7 +10,7 @@ import { callMcpTool, isMcpTool, mcpTools, resolveMcpName, splitMcpName, type Mc
 const client = new Anthropic();
 const DIRECT = !process.env.ANTHROPIC_BASE_URL || process.env.ANTHROPIC_BASE_URL.includes("anthropic.com");
 
-const MODEL = process.env.FRANCE_RE_MODEL ?? (DIRECT ? "claude-opus-5-5" : "anthropic/claude-opus-5.5");
+const MODEL = process.env.FRANCE_RE_MODEL ?? (DIRECT ? "claude-opus-5-5" : "deepseek/deepseek-v4.1-flash");
 const EFFORT = (process.env.FRANCE_RE_EFFORT ?? "medium") as "low" | "medium" | "high";
 const MAX_STEPS = 12;
 

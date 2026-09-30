@@ -20,7 +20,7 @@ france.re se connecte lui-même aux deux serveurs MCP (client MCP côté serveur
 navigateur ──SSE──▶ src/server.ts (Hono)
                       │
                       ▼
-                  src/agent.ts ──▶ API Claude (Opus 5.5), directe ou via OpenRouter
+                  src/agent.ts ──▶ API Messages : Claude en direct, ou OpenRouter (DeepSeek V4.1 Flash par défaut)
                       │
                       ├─▶ src/fiches.ts  index MiniSearch des fiches DILA
                       └─▶ src/mcp.ts     client MCP ─▶ mcp.data.gouv.fr

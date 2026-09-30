@@ -157,6 +157,8 @@ body.chatting main { padding-bottom: 16px; }
 .step::before {
   content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); flex: none;
 }
+.step.note { font-style: italic; }
+.step.note::before { background: transparent; }
 .step.active::before { background: var(--blue); animation: pulse 1s infinite; }
 .answer > :first-child { margin-top: 0; }
 .answer > :last-child { margin-bottom: 0; }
