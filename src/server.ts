@@ -126,11 +126,12 @@ if (ADMIN_PASSWORD) {
 
 // ——— analytics: Umami at stats.marlinski.org, absent unless UMAMI_WEBSITE_ID is set ———
 // Injected into the served page, so switching it off needs no rebuild.
-// data-domains keeps local runs from reporting.
+// data-domains keeps local runs from reporting (UMAMI_DOMAINS, comma-separated).
 const UMAMI_WEBSITE_ID = process.env.UMAMI_WEBSITE_ID;
 if (UMAMI_WEBSITE_ID) {
   const script = process.env.UMAMI_SCRIPT ?? "https://stats.marlinski.org/script.js";
-  const tag = `<script defer src="${script}" data-website-id="${UMAMI_WEBSITE_ID}" data-domains="france.re"></script>`;
+  const domains = process.env.UMAMI_DOMAINS ?? "france.re,france.marlinski.org";
+  const tag = `<script defer src="${script}" data-website-id="${UMAMI_WEBSITE_ID}" data-domains="${domains}"></script>`;
   const index = readFileSync("./public/index.html", "utf8").replace("</head>", `  ${tag}\n</head>`);
   app.get("/", (c) => c.html(index));
   app.get("/index.html", (c) => c.html(index));
