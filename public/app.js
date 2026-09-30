@@ -92,6 +92,32 @@ newChat.addEventListener("click", () => {
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 
+function feedbackBar(turnId) {
+  const bar = el("div", "feedback");
+  const label = el("span", null, "Cette réponse vous a-t-elle aidé ?");
+  const mk = (value, icon, title) => {
+    const b = el("button", null, icon);
+    b.type = "button";
+    b.title = title;
+    b.setAttribute("aria-label", title);
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", async () => {
+      const on = b.getAttribute("aria-pressed") !== "true";
+      bar.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      if (on) b.setAttribute("aria-pressed", "true");
+      label.textContent = on ? "Merci !" : "Cette réponse vous a-t-elle aidé ?";
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, turnId, value: on ? value : null }),
+      }).catch(() => {});
+    });
+    return b;
+  };
+  bar.append(label, mk(1, "👍", "Oui, utile"), mk(-1, "👎", "Non, pas utile"));
+  return bar;
+}
+
 async function ask(text) {
   text = text.trim();
   if (!text || busy) return;
@@ -166,6 +192,8 @@ if (shared) {
         } else if (ev.type === "error") {
           setStep(null);
           answer.append(Object.assign(el("p", "error"), { textContent: ev.message }));
+        } else if (ev.type === "done" && ev.turnId && md) {
+          bot.append(feedbackBar(ev.turnId));
         }
       }
     }

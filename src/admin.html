@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Journal — france.re</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f5f0; --surface: #fff; --ink: #141a2b; --muted: #5d6375; --line: #e2dfd6;
+      --blue: #1f3a93; --red: #d6303a; --green: #1e7a4a; --hover: #eef1fa; --mark: #fff1a8;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #11141c; --surface: #191d28; --ink: #eceef4; --muted: #9aa0b2; --line: #2a2f3d;
+        --blue: #7d97ff; --red: #ff6b73; --green: #5fd49a; --hover: #222838; --mark: #5a4d12;
+        color-scheme: dark;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 Inter, system-ui, sans-serif; }
+    a { color: var(--blue); }
+    header { display: flex; align-items: baseline; gap: 16px; padding: 18px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    header h1 { font: 400 26px "Instrument Serif", Georgia, serif; margin: 0; }
+    header h1 span { color: var(--red); }
+    header .sub { color: var(--muted); }
+    header .export { margin-left: auto; }
+    main { padding: 20px 24px 60px; max-width: 1400px; margin: 0 auto; }
+    h2 { font: 600 13px Inter, sans-serif; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 0 10px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-weight: 600; font-size: 12px; color: var(--muted); background: var(--bg); }
+    tr:last-child td { border-bottom: 0; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .stats-wrap { overflow-x: auto; }
+    .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .toolbar input[type=search] { flex: 1; min-width: 240px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; }
+    .toolbar label { display: flex; gap: 6px; align-items: center; color: var(--muted); cursor: pointer; }
+    .count { color: var(--muted); margin-left: auto; }
+    #turns tbody tr { cursor: pointer; }
+    #turns tbody tr:hover { background: var(--hover); }
+    .q { font-weight: 500; }
+    .snip { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    mark { background: var(--mark); color: inherit; border-radius: 2px; }
+    .when { white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+    .badge.err { color: var(--red); }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .pager { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+    button { font: inherit; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); cursor: pointer; }
+    button:disabled { opacity: .4; cursor: default; }
+    /* conversation panel */
+    dialog { width: min(900px, 96vw); max-height: 92vh; border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--surface); color: var(--ink); }
+    dialog::backdrop { background: rgba(0,0,0,.45); }
+    .dlg-head { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+    .dlg-head code { color: var(--muted); font-size: 12px; }
+    .dlg-body { padding: 8px 20px 24px; }
+    .turn { border-bottom: 1px solid var(--line); padding: 16px 0; }
+    .turn:last-child { border-bottom: 0; }
+    .turn .meta { color: var(--muted); font-size: 12px; display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .turn .user { background: var(--blue); color: #fff; padding: 8px 14px; border-radius: 14px 14px 4px 14px; display: inline-block; max-width: 90%; white-space: pre-wrap; }
+    .turn .answer { margin-top: 12px; }
+    .turn .answer h1, .turn .answer h2, .turn .answer h3 { font: 600 15px Inter, sans-serif; margin: 14px 0 4px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+    .turn .answer p { margin: 0 0 8px; }
+    .turn .error { color: var(--red); font-weight: 500; margin-top: 8px; }
+    details.tools { margin-top: 10px; font-size: 13px; }
+    details.tools summary { cursor: pointer; color: var(--muted); }
+    details.tools ol { margin: 6px 0 0; padding-left: 20px; }
+    details.tools code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+    .empty { text-align: center; color: var(--muted); padding: 30px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>france<span>.re</span> — journal</h1>
+    <span class="sub" id="retention"></span>
+    <a class="export" href="/admin/export.json">Exporter (JSON)</a>
+  </header>
+  <main>
+    <h2>30 derniers jours</h2>
+    <div class="stats-wrap">
+      <table id="stats">
+        <thead><tr><th>Jour</th><th class="num">Questions</th><th class="num">Conversations</th><th class="num">Erreurs</th><th class="num">👍</th><th class="num">👎</th><th class="num">Durée moy.</th><th class="num">Coût</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h2>Questions</h2>
+    <form class="toolbar" id="filters">
+      <input type="search" name="q" placeholder="Rechercher dans les questions et les réponses (accents ignorés)…" autofocus>
+      <label><input type="radio" name="feedback" value="" checked> Toutes</label>
+      <label><input type="radio" name="feedback" value="up"> 👍</label>
+      <label><input type="radio" name="feedback" value="down"> 👎</label>
+      <label><input type="checkbox" name="errors" value="1"> Erreurs seulement</label>
+      <span class="count" id="count"></span>
+    </form>
+    <table id="turns">
+      <thead><tr><th>Date</th><th>Question</th><th class="num">Outils</th><th class="num">Durée</th><th class="num">Jetons</th><th class="num">Coût</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="pager"><button id="prev">← Plus récentes</button><button id="next">Plus anciennes →</button></div>
+  </main>
+
+  <dialog id="dlg">
+    <div class="dlg-head"><div><strong>Conversation</strong> <code id="dlg-id"></code></div><button id="dlg-close">Fermer</button></div>
+    <div class="dlg-body" id="dlg-body"></div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked@15/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    // Snippets come from SQLite with <mark> tags around matches: escape everything else.
+    const safeSnippet = (s) => esc(s).replace(/&lt;mark&gt;/g, "<mark>").replace(/&lt;\/mark&gt;/g, "</mark>");
+    const md = (s) => DOMPurify.sanitize(marked.parse(s || ""));
+    const fmtDate = (iso) => new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+    const fmtCost = (c) => (c == null ? "—" : c < 0.01 ? `${(c * 100).toFixed(2)} ¢` : `${c.toFixed(3)} $`);
+    const fmtTok = (n) => (n >= 1000 ? `${Math.round(n / 1000)} k` : n);
+    const fb = (v) => (v === 1 ? '<span class="up">👍</span>' : v === -1 ? '<span class="down">👎</span>' : "");
+    const toolName = (n) => n.replace("__", " › ");
+
+    let page = 1;
+
+    async function loadStats() {
+      const { days, retentionDays } = await (await fetch("/admin/api/stats")).json();
+      $("#retention").textContent = `Conservation : ${retentionDays} jours · aucune adresse IP enregistrée`;
+      $("#stats tbody").innerHTML = days.length
+        ? days.map((d) => `<tr><td>${d.day}</td><td class="num">${d.questions}</td><td class="num">${d.conversations}</td><td class="num">${d.errors || ""}</td><td class="num">${d.up || ""}</td><td class="num">${d.down || ""}</td><td class="num">${d.avg_seconds} s</td><td class="num">${fmtCost(d.cost_usd)}</td></tr>`).join("")
+        : `<tr><td colspan="8" class="empty">Aucune question pour l'instant.</td></tr>`;
+    }
+
+    async function loadTurns() {
+      const f = new FormData($("#filters"));
+      const params = new URLSearchParams({ page });
+      if (f.get("q")) params.set("q", f.get("q"));
+      if (f.get("feedback")) params.set("feedback", f.get("feedback"));
+      if (f.get("errors")) params.set("errors", "1");
+      const { total, rows, limit } = await (await fetch(`/admin/api/turns?${params}`)).json();
+      $("#count").textContent = `${total} résultat${total > 1 ? "s" : ""}`;
+      $("#turns tbody").innerHTML = rows.length
+        ? rows.map((r) => `
+          <tr data-session="${esc(r.session_id)}">
+            <td class="when">${fmtDate(r.created_at)}${r.turn_index ? `<br>tour ${r.turn_index + 1}` : ""}</td>
+            <td><div class="q">${esc(r.question)}</div>${r.snippet ? `<div class="snip">${safeSnippet(r.snippet)}</div>` : ""}</td>
+            <td class="num">${JSON.parse(r.tools).length}</td>
+            <td class="num">${(r.duration_ms / 1000).toFixed(0)} s</td>
+            <td class="num">${fmtTok(r.input_tokens)} / ${fmtTok(r.output_tokens)}</td>
+            <td class="num">${fmtCost(r.cost_usd)}</td>
+            <td>${fb(r.feedback)} ${r.error ? '<span class="badge err">erreur</span>' : ""}</td>
+          </tr>`).join("")
+        : `<tr><td colspan="7" class="empty">Rien trouvé.</td></tr>`;
+      $("#prev").disabled = page <= 1;
+      $("#next").disabled = page * limit >= total;
+    }
+
+    async function openSession(id) {
+      const turns = await (await fetch(`/admin/api/session/${encodeURIComponent(id)}`)).json();
+      $("#dlg-id").textContent = id;
+      $("#dlg-body").innerHTML = turns.map((t) => {
+        const tools = JSON.parse(t.tools);
+        return `<div class="turn">
+          <div class="meta"><span>${fmtDate(t.created_at)}</span><span>${esc(t.model)}</span><span>${(t.duration_ms / 1000).toFixed(1)} s</span><span>${t.input_tokens} → ${t.output_tokens} jetons</span><span>${fmtCost(t.cost_usd)}</span>${fb(t.feedback)}</div>
+          <div class="user">${esc(t.question)}</div>
+          <div class="answer">${md(t.answer)}</div>
+          ${t.error ? `<div class="error">⚠ ${esc(t.error)}</div>` : ""}
+          ${tools.length ? `<details class="tools"><summary>${tools.length} appel${tools.length > 1 ? "s" : ""} d'outil</summary><ol>${tools.map((c) => `<li><strong>${esc(toolName(c.name))}</strong> <code>${esc(JSON.stringify(c.input))}</code> · ${c.ms} ms${c.error ? ' <span class="badge err">erreur</span>' : ""}</li>`).join("")}</ol></details>` : ""}
+        </div>`;
+      }).join("");
+      $("#dlg").showModal();
+    }
+
+    let timer;
+    $("#filters").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => { page = 1; loadTurns(); }, 250); });
+    $("#filters").addEventListener("submit", (e) => e.preventDefault());
+    $("#prev").addEventListener("click", () => { page--; loadTurns(); });
+    $("#next").addEventListener("click", () => { page++; loadTurns(); });
+    $("#turns tbody").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-session]"); if (tr) openSession(tr.dataset.session); });
+    $("#dlg-close").addEventListener("click", () => $("#dlg").close());
+
+    loadStats();
+    loadTurns();
+  </script>
+</body>
+</html>

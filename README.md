@@ -29,7 +29,23 @@ navigateur ──SSE──▶ src/server.ts (Hono)
 
 - L'historique de chaque conversation est conservé côté serveur, en mémoire, et n'est jamais réécrit (le cache de prompt et les blocs de réflexion restent valides d'un tour à l'autre). Les conversations expirent après une heure d'inactivité.
 - Un plafond de questions par IP et par heure (`RATE_LIMIT`) protège le budget d'API.
-- Aucun compte, aucun cookie, aucune donnée personnelle conservée au-delà de la conversation.
+- Aucun compte, aucun cookie.
+
+## Journal et administration
+
+Chaque question est enregistrée dans une base SQLite (`src/db.ts`, via `node:sqlite`, sans dépendance) : question, réponse finale, appels d'outils (nom, paramètres, durée — pas leurs résultats), modèle, durée, jetons, coût estimé, erreur éventuelle, et l'avis 👍/👎 du visiteur. **Aucune adresse IP n'est enregistrée** ; les lignes sont supprimées au bout de `FRANCE_RE_RETENTION_DAYS` jours (90 par défaut). Les visiteurs en sont informés dans « À propos ».
+
+Si `ADMIN_PASSWORD` est défini, `/admin` (utilisateur `admin`, authentification HTTP Basic) permet de :
+- rechercher dans les questions et réponses (plein texte FTS5, accents ignorés), filtrer par avis ou par erreur ;
+- relire une conversation complète, tour par tour, avec ses appels d'outils ;
+- suivre les statistiques par jour (questions, conversations, erreurs, avis, durée, coût) ;
+- exporter tout le journal en JSON (`/admin/export.json`).
+
+| Variable | Défaut | Rôle |
+|---|---|---|
+| `ADMIN_PASSWORD` | — | Active `/admin` |
+| `FRANCE_RE_DB` | `data/france-re.sqlite` | Chemin de la base |
+| `FRANCE_RE_RETENTION_DAYS` | `90` | Durée de conservation |
 
 ## Lancer en local
 

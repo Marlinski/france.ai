@@ -4,7 +4,10 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { z } from "zod";
+import { readFileSync } from "node:fs";
+import { basicAuth } from "hono/basic-auth";
 import { chat, MCP_SERVERS } from "./agent.ts";
+import { exportAll, getSession, listTurns, purgeOld, RETENTION_DAYS, setFeedback, stats } from "./db.ts";
 import { initMcp } from "./mcp.ts";
 import { downloadFiches } from "./dila.ts";
 import { indexInfo, loadFiches, setFiches } from "./fiches.ts";
@@ -50,6 +53,46 @@ app.post("/api/chat", async (c) => {
   });
 });
 
+const FeedbackBody = z.object({
+  sessionId: z.string().uuid(),
+  turnId: z.number().int().positive(),
+  value: z.union([z.literal(1), z.literal(-1), z.null()]),
+});
+
+app.post("/api/feedback", async (c) => {
+  const body = FeedbackBody.safeParse(await c.req.json().catch(() => null));
+  if (!body.success) return c.json({ error: "Requête invalide" }, 400);
+  return setFeedback(body.data.turnId, body.data.sessionId, body.data.value) ? c.json({ ok: true }) : c.json({ error: "Introuvable" }, 404);
+});
+
+// ——— admin: the question journal, behind basic auth; absent unless ADMIN_PASSWORD is set ———
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (ADMIN_PASSWORD) {
+  const adminPage = readFileSync(new URL("./admin.html", import.meta.url), "utf8");
+  app.use("/admin/*", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
+  app.use("/admin", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
+  app.use("/admin/*", async (c, next) => {
+    await next();
+    c.header("Cache-Control", "no-store");
+    c.header("X-Robots-Tag", "noindex");
+  });
+  app.get("/admin", (c) => c.html(adminPage));
+  app.get("/admin/api/turns", (c) => {
+    const { q, feedback, errors, page } = c.req.query();
+    const limit = 50;
+    return c.json({
+      ...listTurns({ q, feedback: feedback === "up" || feedback === "down" ? feedback : undefined, errors: errors === "1", limit, offset: (Math.max(1, Number(page) || 1) - 1) * limit }),
+      limit,
+    });
+  });
+  app.get("/admin/api/session/:id", (c) => c.json(getSession(c.req.param("id"))));
+  app.get("/admin/api/stats", (c) => c.json({ days: stats(Number(c.req.query("days")) || 30), retentionDays: RETENTION_DAYS }));
+  app.get("/admin/export.json", (c) => {
+    c.header("Content-Disposition", `attachment; filename="france-re-${new Date().toISOString().slice(0, 10)}.json"`);
+    return c.json(exportAll());
+  });
+}
+
 app.use("/*", serveStatic({ root: "./public" }));
 
 // Start from the snapshot baked into the image, then follow DILA's daily updates.
@@ -71,4 +114,12 @@ try {
 }
 setInterval(refresh, 86400_000).unref();
 await initMcp(MCP_SERVERS);
+
+const purge = () => {
+  const n = purgeOld();
+  if (n) console.log(`journal : ${n} questions de plus de ${RETENTION_DAYS} jours supprimées`);
+};
+purge();
+setInterval(purge, 86400_000).unref();
+if (!ADMIN_PASSWORD) console.log("ADMIN_PASSWORD absent : /admin désactivé");
 serve({ fetch: app.fetch, port: PORT }, (info) => console.log(`france.re → http://localhost:${info.port}`));

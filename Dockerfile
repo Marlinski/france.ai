@@ -20,4 +20,5 @@ COPY public ./public
 COPY --from=index /app/data ./data
 USER node
 EXPOSE 8080
-CMD ["node", "--max-old-space-size=900", "src/server.ts"]
+# node:sqlite (the question journal) still flags itself experimental on Node 24.
+CMD ["node", "--max-old-space-size=900", "--disable-warning=ExperimentalWarning", "src/server.ts"]

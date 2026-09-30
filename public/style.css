@@ -171,6 +171,13 @@ body.chatting main { padding-bottom: 16px; }
 .answer table { border-collapse: collapse; font-size: 14px; margin: 0 0 12px; display: block; overflow-x: auto; }
 .answer th, .answer td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; }
 .error { color: var(--red); font-size: 14px; }
+.feedback { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--muted); font-size: 13px; }
+.feedback span { margin-right: 4px; }
+.feedback button {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 3px 10px; cursor: pointer; font-size: 14px; filter: grayscale(1); opacity: .7;
+}
+.feedback button:hover, .feedback button[aria-pressed="true"] { filter: none; opacity: 1; border-color: var(--blue); }
 .typing { display: inline-flex; gap: 4px; padding: 6px 0; }
 .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite both; }
 .typing i:nth-child(2) { animation-delay: .2s; }

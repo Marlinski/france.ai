@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { getFiche, searchFiches } from "./fiches.ts";
 import { callMcpTool, isMcpTool, mcpTools, resolveMcpName, splitMcpName, type McpServerConfig } from "./mcp.ts";
+import { logTurn, type ToolCall } from "./db.ts";
 
 // Talks to the Anthropic API directly, or to any Messages-API-compatible gateway
 // such as OpenRouter when ANTHROPIC_BASE_URL is set (https://openrouter.ai/api).
@@ -11,6 +12,20 @@ const client = new Anthropic();
 const DIRECT = !process.env.ANTHROPIC_BASE_URL || process.env.ANTHROPIC_BASE_URL.includes("anthropic.com");
 
 const MODEL = process.env.FRANCE_RE_MODEL ?? (DIRECT ? "claude-opus-5-5" : "deepseek/deepseek-v4.1-flash");
+// Per-token prices, for the cost column of the journal. OpenRouter publishes them;
+// for the Anthropic API directly the cost is left empty.
+let prices: { input: number; output: number } | null = null;
+if (!DIRECT && process.env.ANTHROPIC_BASE_URL?.includes("openrouter.ai")) {
+  fetch("https://openrouter.ai/api/v1/models")
+    .then((r) => r.json() as Promise<{ data: { id: string; pricing: { prompt: string; completion: string } }[] }>)
+    .then(({ data }) => {
+      const m = data.find((m) => m.id === MODEL);
+      if (m) prices = { input: Number(m.pricing.prompt), output: Number(m.pricing.completion) };
+    })
+    .catch((err) => console.error("prix OpenRouter indisponibles :", err.message));
+}
+const costOf = (input: number, output: number) => (prices ? input * prices.input + output * prices.output : null);
+
 const EFFORT = (process.env.FRANCE_RE_EFFORT ?? "medium") as "low" | "medium" | "high";
 const MAX_STEPS = 12;
 
@@ -135,7 +150,7 @@ export type AgentEvent =
   | { type: "status"; tool: string; server?: string; input?: unknown }
   | { type: "text"; text: string }
   | { type: "error"; message: string }
-  | { type: "done" };
+  | { type: "done"; turnId?: number };
 
 interface Session {
   messages: Anthropic.Beta.BetaMessageParam[];
@@ -143,6 +158,8 @@ interface Session {
   tools: Anthropic.Beta.BetaTool[];
   updatedAt: number;
   busy: boolean;
+  /** Questions asked so far in this conversation. */
+  turns: number;
 }
 
 const sessions = new Map<string, Session>();
@@ -163,13 +180,23 @@ const today = () =>
  */
 export async function* chat(sessionId: string, userText: string, signal: AbortSignal): AsyncGenerator<AgentEvent> {
   let session = sessions.get(sessionId);
-  if (!session) sessions.set(sessionId, (session = { messages: [], tools: [...localTools, ...mcpTools()], updatedAt: Date.now(), busy: false }));
+  if (!session) sessions.set(sessionId, (session = { messages: [], tools: [...localTools, ...mcpTools()], updatedAt: Date.now(), busy: false, turns: 0 }));
   if (session.busy) return yield { type: "error", message: "Une réponse est déjà en cours pour cette conversation." };
   if (session.messages.filter((m) => m.role === "user" && typeof m.content === "string").length >= MAX_TURNS)
     return yield { type: "error", message: "Cette conversation est trop longue. Commencez-en une nouvelle." };
 
   session.busy = true;
   session.updatedAt = Date.now();
+  // What goes into the journal (src/db.ts) once the turn is over.
+  const startedAt = Date.now();
+  const turnIndex = session.turns++;
+  const toolCalls: ToolCall[] = [];
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let answer = "";
+  let error: string | null = null;
+  let turnId: number | undefined;
+  const fail = (message: string): AgentEvent => ((error = message), { type: "error", message });
   const messages = session.messages;
   const turnStart = messages.length;
   // Drop everything from this turn so the history stays valid for the next one.
@@ -213,6 +240,9 @@ export async function* chat(sessionId: string, userText: string, signal: AbortSi
         }
         message = await stream.finalMessage();
         jsonRetries = 0;
+        const u = message.usage;
+        inputTokens += u.input_tokens + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+        outputTokens += u.output_tokens;
       } catch (err) {
         // Only unparseable eager-streamed tool input is retried; API errors propagate.
         if (err instanceof Anthropic.APIError || signal.aborted || jsonRetries++ >= 2) throw err;
@@ -222,17 +252,26 @@ export async function* chat(sessionId: string, userText: string, signal: AbortSi
       const hasToolUse = message.content.some((b) => b.type === "tool_use");
       if (message.stop_reason === "refusal" || (message.stop_reason === "max_tokens" && hasToolUse)) {
         rollback();
-        yield { type: "error", message: message.stop_reason === "refusal" ? "Je ne peux pas répondre à cette demande." : "La réponse a été interrompue. Reformulez votre question." };
+        yield fail(message.stop_reason === "refusal" ? "Je ne peux pas répondre à cette demande." : "La réponse a été interrompue. Reformulez votre question.");
         break;
       }
       messages.push({ role: "assistant", content: message.content });
+      // The answer is the text of the last message; text before a tool call is thinking aloud.
+      answer = message.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
       if (message.stop_reason === "pause_turn") continue;
       if (message.stop_reason !== "tool_use") break;
 
       const toolUses = message.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
       if (!toolUses.length) break;
       // All results go back in one user message, in call order.
-      const results = await Promise.all(toolUses.map((t) => runTool(t.name, t.input)));
+      const results = await Promise.all(
+        toolUses.map(async (t) => {
+          const t0 = Date.now();
+          const r = await runTool(t.name, t.input);
+          toolCalls.push({ name: t.name, input: t.input, ms: Date.now() - t0, ...(r.isError && { error: true }) });
+          return r;
+        }),
+      );
       messages.push({
         role: "user",
         content: toolUses.map((t, i) => ({
@@ -244,21 +283,33 @@ export async function* chat(sessionId: string, userText: string, signal: AbortSi
       });
       if (step === MAX_STEPS - 1) {
         rollback();
-        yield { type: "error", message: "Recherche interrompue : trop d'étapes. Précisez votre question." };
+        yield fail("Recherche interrompue : trop d'étapes. Précisez votre question.");
       }
     }
   } catch (err) {
     rollback();
-    if (signal.aborted) return;
+    if (signal.aborted) {
+      error = "interrompu : le visiteur a quitté la page";
+      return;
+    }
     console.error(err);
-    const message =
+    yield fail(
       err instanceof Anthropic.RateLimitError ? "Le service est très sollicité. Réessayez dans un instant."
       : err instanceof Anthropic.APIError ? "Le service est momentanément indisponible. Réessayez dans un instant."
-      : "Une erreur inattendue s'est produite.";
-    yield { type: "error", message };
+      : "Une erreur inattendue s'est produite.",
+    );
   } finally {
     session.busy = false;
     session.updatedAt = Date.now();
+    try {
+      turnId = logTurn({
+        sessionId, turnIndex, question: userText, answer, tools: toolCalls, model: MODEL,
+        durationMs: Date.now() - startedAt, inputTokens, outputTokens,
+        costUsd: costOf(inputTokens, outputTokens), error,
+      });
+    } catch (err) {
+      console.error("journal : écriture impossible :", err);
+    }
   }
-  yield { type: "done" };
+  yield { type: "done", turnId };
 }
