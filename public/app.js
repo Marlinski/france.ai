@@ -6,70 +6,56 @@ const send = $("#send");
 const mic = $("#mic");
 const newChat = $("#new-chat");
 
-// ——— i18n (the assistant itself answers in the user's language) ———
-const EN = {
-  new: "New conversation", about: "About", title: "How can we <em>help you?</em>",
-  lede: "Ask about your rights and administrative procedures in France. Answers are grounded in official public sources.",
-  label: "Your question", placeholder: "e.g. How do I renew my passport?", mic: "Dictate", send: "Send",
-  sources: "Answers grounded in", aboutTitle: "About france.re", free: "Free, no account, no ads.",
-  aboutBody: "france.re is an <strong>independent, unofficial service</strong>, not affiliated with the French government. An AI assistant looks up information in open public data: Service-Public.fr practical guides (DILA, Licence Ouverte), the data.gouv.fr catalogue through its <a href='https://github.com/datagouv/datagouv-mcp' target='_blank' rel='noopener'>official MCP server</a>, and other public APIs through the community <a href='https://github.com/OneNicolas/mcp-service-public' target='_blank' rel='noopener'>mcp-service-public</a> server.",
-  aboutWarn: "AI can make mistakes: always check the official site cited as a source before acting. Never share sensitive data (tax number, social security number, passwords).",
-};
-const lang = navigator.language?.toLowerCase().startsWith("fr") ? "fr" : "en";
-if (lang === "en") {
-  document.documentElement.lang = "en";
-  document.querySelectorAll("[data-i18n]").forEach((el) => {
-    const v = EN[el.dataset.i18n];
-    if (v) el.innerHTML = v;
-  });
-  document.querySelectorAll("[data-i18n-html]").forEach((el) => { const v = EN[el.dataset.i18nHtml]; if (v) el.innerHTML = v; });
-  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => (el.placeholder = EN[el.dataset.i18nPlaceholder]));
-  document.querySelectorAll(".suggestions button").forEach((b) => { b.textContent = b.dataset.en; b.dataset.q = b.dataset.qEn; });
-  document.querySelectorAll("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", EN[el.dataset.i18nAria]));
-}
-const T = lang === "en"
-  ? { thinking: "Thinking…", stopped: "Connection lost. Please try again.", tooMany: "Too many questions. Please try again later." }
-  : { thinking: "Réflexion…", stopped: "Connexion interrompue. Réessayez.", tooMany: "Trop de questions. Réessayez plus tard." };
+const T = { thinking: "Réflexion…", stopped: "Connexion interrompue. Réessayez.", tooMany: "Trop de questions. Réessayez plus tard." };
 
 const TOOL_LABELS = {
-  fr: {
-    chercher_fiches_service_public: "Recherche dans les fiches Service-Public.fr",
-    lire_fiche_service_public: "Lecture d'une fiche Service-Public.fr",
-    search_datasets: "Recherche de jeux de données sur data.gouv.fr",
-    get_dataset_info: "Consultation d'un jeu de données data.gouv.fr",
-    list_dataset_resources: "Liste des fichiers d'un jeu de données",
-    query_resource_data: "Lecture des données",
-    get_resource_info: "Consultation d'un fichier de données",
-    search_dataservices: "Recherche d'API publiques",
-    get_dataservice_info: "Consultation d'une API publique",
-    get_dataservice_openapi_spec: "Lecture de la documentation d'une API",
-    search_organizations: "Recherche d'organismes producteurs de données",
-    rechercher_service_local: "Recherche dans l'annuaire de l'administration",
-    rechercher_entreprise: "Recherche dans l'annuaire des entreprises",
-    consulter_fiscalite_locale: "Consultation de la fiscalité locale",
-    simuler_taxe_fonciere: "Simulation de taxe foncière",
-    simuler_frais_notaire: "Simulation des frais de notaire",
-    simuler_impot_revenu: "Simulation de l'impôt sur le revenu",
-    rechercher_offre_emploi: "Recherche d'offres d'emploi (France Travail)",
-    rechercher_texte_legal: "Recherche dans les textes de loi",
-    rechercher_code_juridique: "Recherche dans les codes juridiques",
-    consulter_journal_officiel: "Recherche au Journal officiel",
-    rechercher_etablissement_scolaire: "Recherche d'établissements scolaires",
-    consulter_parcoursup: "Recherche sur Parcoursup",
-    consulter_risques_naturels: "Consultation des risques naturels (Géorisques)",
-    consulter_prix_carburant: "Consultation des prix des carburants",
-  },
-  en: {
-    chercher_fiches_service_public: "Searching Service-Public.fr guides",
-    lire_fiche_service_public: "Reading a Service-Public.fr guide",
-    search_datasets: "Searching data.gouv.fr datasets",
-    query_resource_data: "Reading open data",
-    rechercher_service_local: "Searching the public administration directory",
-    rechercher_entreprise: "Searching the company directory",
-  },
+  chercher_fiches_service_public: "Recherche dans les fiches Service-Public.fr",
+  lire_fiche_service_public: "Lecture d'une fiche Service-Public.fr",
+  search_datasets: "Recherche de jeux de données sur data.gouv.fr",
+  get_dataset_info: "Consultation d'un jeu de données data.gouv.fr",
+  list_dataset_resources: "Liste des fichiers d'un jeu de données",
+  query_resource_data: "Lecture des données",
+  get_resource_info: "Consultation d'un fichier de données",
+  search_dataservices: "Recherche d'API publiques",
+  get_dataservice_info: "Consultation d'une API publique",
+  get_dataservice_openapi_spec: "Lecture de la documentation d'une API",
+  search_organizations: "Recherche d'organismes producteurs de données",
+  rechercher_service_local: "Recherche dans l'annuaire de l'administration",
+  rechercher_entreprise: "Recherche dans l'annuaire des entreprises",
+  consulter_sirene_historique: "Recherche dans le répertoire Sirene",
+  consulter_fiscalite_locale: "Consultation de la fiscalité locale",
+  rechercher_doctrine_fiscale: "Recherche dans la doctrine fiscale (BOFiP)",
+  simuler_taxe_fonciere: "Simulation de taxe foncière",
+  simuler_frais_notaire: "Simulation des frais de notaire",
+  simuler_impot_revenu: "Simulation de l'impôt sur le revenu",
+  consulter_zonage_immobilier: "Consultation du zonage immobilier",
+  comparer_communes: "Comparaison de communes",
+  rechercher_convention_collective: "Recherche de convention collective",
+  rechercher_offre_emploi: "Recherche d'offres d'emploi (France Travail)",
+  rechercher_formation: "Recherche de formations (CPF)",
+  rechercher_texte_legal: "Recherche dans les textes de loi",
+  rechercher_code_juridique: "Recherche dans les codes juridiques",
+  consulter_journal_officiel: "Recherche au Journal officiel",
+  rechercher_jurisprudence: "Recherche de jurisprudence",
+  rechercher_annonce_legale: "Recherche dans le BODACC",
+  rechercher_marche_public: "Recherche de marchés publics (BOAMP)",
+  rechercher_subvention: "Recherche de subventions",
+  rechercher_etablissement_scolaire: "Recherche d'établissements scolaires",
+  consulter_resultats_lycee: "Consultation des résultats d'un lycée",
+  consulter_evaluations_nationales: "Consultation des évaluations nationales",
+  consulter_parcoursup: "Recherche sur Parcoursup",
+  consulter_parcoursup_stats: "Statistiques Parcoursup",
+  consulter_insertion_professionnelle: "Consultation de l'insertion professionnelle",
+  consulter_acces_soins: "Consultation de l'accès aux soins",
+  consulter_aide_sociale: "Consultation des statistiques CAF",
+  consulter_securite: "Consultation des statistiques de sécurité",
+  consulter_risques_naturels: "Consultation des risques naturels (Géorisques)",
+  consulter_prix_carburant: "Consultation des prix des carburants",
+  consulter_budget_commune: "Consultation du budget d'une commune",
+  consulter_budget_epci: "Consultation du budget d'une intercommunalité",
 };
 const labelFor = (tool, server) =>
-  TOOL_LABELS[lang][tool] ?? TOOL_LABELS.fr[tool] ?? `${lang === "en" ? "Querying" : "Consultation"} ${server === "datagouv" ? "data.gouv.fr" : "des données publiques"} (${tool})`;
+  TOOL_LABELS[tool] ?? (server === "datagouv" ? "Consultation de data.gouv.fr" : "Consultation des données publiques");
 
 // ——— markdown ———
 marked.setOptions({ breaks: false, gfm: true });
@@ -202,7 +188,7 @@ if (Recognition) {
   mic.addEventListener("click", () => {
     if (rec) return rec.stop();
     rec = new Recognition();
-    rec.lang = lang === "fr" ? "fr-FR" : navigator.language || "en-US";
+    rec.lang = "fr-FR";
     rec.interimResults = true;
     const base = input.value ? input.value + " " : "";
     rec.onresult = (e) => {

@@ -88,8 +88,9 @@ main {
   font: 400 clamp(40px, 7vw, 68px)/1.05 var(--serif);
   letter-spacing: -.02em;
   margin: 0 0 16px;
+  text-wrap: balance;
 }
-.hero h1 em { font-style: italic; color: var(--blue); }
+.hero h1 em { font-style: italic; color: var(--blue); white-space: nowrap; }
 .lede { color: var(--muted); font-size: 17px; margin: 0 auto; max-width: 520px; }
 
 .composer {
