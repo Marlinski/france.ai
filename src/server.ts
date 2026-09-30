@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { z } from "zod";
@@ -36,6 +36,23 @@ const ChatBody = z.object({
 
 const app = new Hono();
 
+// Browsers stick to HTTPS for a year once they have seen the site over it.
+app.use("*", async (c, next) => {
+  await next();
+  c.header("Strict-Transport-Security", "max-age=31536000");
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+});
+
+// Markdown rendering and sanitising, served from here rather than a CDN: a
+// compromised third party must not be able to run code next to /admin.
+const vendor = (file: string) => {
+  const body = readFileSync(new URL(`../node_modules/${file}`, import.meta.url), "utf8");
+  return (c: Context) => c.body(body, 200, { "Content-Type": "text/javascript; charset=utf-8", "Cache-Control": "public, max-age=86400" });
+};
+app.get("/vendor/marked.js", vendor("marked/lib/marked.umd.js"));
+app.get("/vendor/purify.js", vendor("dompurify/dist/purify.min.js"));
+
 app.get("/api/health", (c) => c.json({ ok: true, fiches: indexInfo }));
 
 app.post("/api/chat", async (c) => {
@@ -69,6 +86,7 @@ app.post("/api/feedback", async (c) => {
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 if (ADMIN_PASSWORD) {
   const adminPage = readFileSync(new URL("./admin.html", import.meta.url), "utf8");
+  const adminScript = readFileSync(new URL("./admin.js", import.meta.url), "utf8");
   app.use("/admin/*", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
   app.use("/admin", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
   app.use("/admin/*", async (c, next) => {
@@ -76,6 +94,19 @@ if (ADMIN_PASSWORD) {
     c.header("Cache-Control", "no-store");
     c.header("X-Robots-Tag", "noindex");
   });
+  // Visitors' questions and the model's answers are shown here, so treat them as hostile:
+  // no inline or third-party script, no requests anywhere but this origin, no framing.
+  app.use("/admin", async (c, next) => {
+    await next();
+    c.header(
+      "Content-Security-Policy",
+      "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'none'; frame-ancestors 'none'; base-uri 'none'",
+    );
+    c.header("Cache-Control", "no-store");
+    c.header("X-Robots-Tag", "noindex");
+  });
+  app.get("/admin/app.js", (c) => c.body(adminScript, 200, { "Content-Type": "text/javascript; charset=utf-8" }));
   app.get("/admin", (c) => c.html(adminPage));
   app.get("/admin/api/turns", (c) => {
     const { q, feedback, errors, page } = c.req.query();
