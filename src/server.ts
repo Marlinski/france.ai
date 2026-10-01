@@ -87,8 +87,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 if (ADMIN_PASSWORD) {
   const adminPage = readFileSync(new URL("./admin.html", import.meta.url), "utf8");
   const adminScript = readFileSync(new URL("./admin.js", import.meta.url), "utf8");
-  app.use("/admin/*", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
-  app.use("/admin", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.re admin" }));
+  app.use("/admin/*", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.ai admin" }));
+  app.use("/admin", basicAuth({ username: "admin", password: ADMIN_PASSWORD, realm: "france.ai admin" }));
   app.use("/admin/*", async (c, next) => {
     await next();
     c.header("Cache-Control", "no-store");
@@ -119,7 +119,7 @@ if (ADMIN_PASSWORD) {
   app.get("/admin/api/session/:id", (c) => c.json(getSession(c.req.param("id"))));
   app.get("/admin/api/stats", (c) => c.json({ days: stats(Number(c.req.query("days")) || 30), retentionDays: RETENTION_DAYS }));
   app.get("/admin/export.json", (c) => {
-    c.header("Content-Disposition", `attachment; filename="france-re-${new Date().toISOString().slice(0, 10)}.json"`);
+    c.header("Content-Disposition", `attachment; filename="france-ai-${new Date().toISOString().slice(0, 10)}.json"`);
     return c.json(exportAll());
   });
 }
